@@ -7,7 +7,6 @@
  */
 
 var app = require("../app");
-// var debug = require("debug")("rest-api-nodejs-mongodb:server");
 var http = require("http");
 
 /**

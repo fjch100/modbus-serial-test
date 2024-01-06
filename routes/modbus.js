@@ -5,7 +5,8 @@ const ModbusController = require("../controllers/ModbusController");
 
 var router = express.Router();
 
-router.get("/", ModbusController.test);
+router.get("/", ModbusController.open);
+
 
 /*
 router.get("/", BookController.bookList);
