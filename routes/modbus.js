@@ -5,7 +5,10 @@ const ModbusController = require("../controllers/ModbusController");
 
 var router = express.Router();
 
-router.get("/", ModbusController.open);
+router.get("/readcoils", ModbusController.readCoils);
+router.get("/readinputs", ModbusController.readInputs);
+router.post("/writecoils", ModbusController.writeCoils);
+
 
 
 /*
