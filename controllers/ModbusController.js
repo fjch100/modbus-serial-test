@@ -1,3 +1,4 @@
+/* eslint-disable quotes */
 /* eslint-disable linebreak-style */
 /* eslint-disable no-unused-vars */
 /* eslint-disable indent */
@@ -6,27 +7,14 @@ const auth = require("../middlewares/jwt");
 const ModbusRTU = require("modbus-serial");
 const client = new ModbusRTU();
 
-let mbsStatus = "Initializing...";    // holds a status of Modbus
-
-// Modbus 'state' constants
-const MBS_STATE_INIT = "State init";
-const MBS_STATE_IDLE = "State idle";
-const MBS_STATE_NEXT = "State next";
-const MBS_STATE_GOOD_READ = "State good (read)";
-const MBS_STATE_FAIL_READ = "State fail (read)";
-const MBS_STATE_GOOD_CONNECT = "State good (port)";
-const MBS_STATE_FAIL_CONNECT = "State fail (port)";
-
 // Modbus configuration values
-const mbsId = 0;
+// const mbsId = 0;
+client.setID(0);
 const mbsScan = 100;
-const mbsTimeout = 500;
-client.setID(mbsId);
+const mbsTimeout = 300;
 client.setTimeout(mbsTimeout);
 
-let mbsState = MBS_STATE_INIT;
 let coils;
-
 
 // Upon SerialPort error
 client.on("error", function (error) {
@@ -63,36 +51,45 @@ client.on("error", function (error) {
 }
  */
 exports.readCoils = async (req, res) => {
-
+    let portRetrys = 0;
+    let readRetrys = 0;
+    let maxRetrys = 3;
     try {
         if (!client.isOpen) {
-            client.connectRTUBuffered("COM8", { baudRate: 115200, parity: "none", dataBits: 8, stopBits: 1 }, readC);
-            mbsStatus = "Connected, wait for reading...";
-            console.log("Status connectRTUBuffered: ", mbsStatus);
-        } else {
-            mbsStatus = "CLient already Opened, wait for reading...";
-            console.log("Status connectRTUBuffered: ", mbsStatus);
-            readC();
+            let comOpen = await openCom('COM8');
+            if (!comOpen) {
+                while (!comOpen) {
+                    console.log("Opening port retry# ", portRetrys);
+                    comOpen = await openCom('COM8');
+                    portRetrys++;
+                    if (portRetrys > maxRetrys) {
+                        // return apiResponse.ErrorResponse(res, "ERROR, FAIL TO OPEN PORT");
+                        throw new Error("COULD NOT OPEN COM PORT");
+                    }
+                }
+            }
+            // return apiResponse.successResponseWithData(res, "Port Open OK", []);
         }
+
+
+        let read = await readingCoils();
+        if (!read) {
+            while (!read) {
+                console.log("Reading Coils retry# ", readRetrys);
+                read = await readingCoils();
+                readRetrys++;
+                if (readRetrys > maxRetrys) {
+                    console.log("Error leyendo los Coils:");
+                    // apiResponse.ErrorResponse(res, "ERROR, FAIL READ COILS");
+                    throw new Error("ERROR, FAIL READ COILS");
+                }
+            }
+        }
+        return apiResponse.successResponseWithData(res, "COILS READ OK", read);
 
     } catch (error) {
         console.log("Error opening the COM port:", error);
-        apiResponse.ErrorResponse(res, "ERROR, FAIL TO OPEN PORT");
-    }
-
-    function readC() {
-        console.log("entro a leer coils");
-        client.setTimeout(mbsTimeout);
-
-        client.readCoils(0, 4)
-            .then((data) => {
-                console.log("data:", data);
-                return apiResponse.successResponseWithData(res, "COILS READ OK", data);
-            })
-            .catch((error) => {
-                console.log("Error leyendo los Coils:", error);
-                apiResponse.ErrorResponse(res, "ERROR, FAIL READ COILS");
-            });
+        apiResponse.ErrorResponse(res, "ERROR, FAIL TO READ COILS: " + error);
     }
 };
 
@@ -125,36 +122,45 @@ exports.readCoils = async (req, res) => {
 }
  */
 exports.readInputs = async (req, res) => {
-
+    let portRetrys = 0;
+    let readRetrys = 0;
+    let maxRetrys = 3;
     try {
         if (!client.isOpen) {
-            client.connectRTUBuffered("COM8", { baudRate: 115200, parity: "none", dataBits: 8, stopBits: 1 }, readI);
-            mbsStatus = "Connected, wait for reading...";
-            console.log("Status connectRTUBuffered: ", mbsStatus);
-        } else {
-            mbsStatus = "CLient already Opened, wait for reading...";
-            console.log("Status connectRTUBuffered: ", mbsStatus);
-            readI();
+            let comOpen = await openCom('COM8');
+            if (!comOpen) {
+                while (!comOpen) {
+                    console.log("Opening port retry# ", portRetrys);
+                    comOpen = await openCom('COM8');
+                    portRetrys++;
+                    if (portRetrys > maxRetrys) {
+                        // return apiResponse.ErrorResponse(res, "ERROR, FAIL TO OPEN PORT");
+                        throw new Error("COULD NOT OPEN COM PORT");
+                    }
+                }
+            }
+            // return apiResponse.successResponseWithData(res, "Port Open OK", []);
         }
+
+
+        let read = await readingInputs();
+        if (!read) {
+            while (!read) {
+                console.log("Reading Inputs retry# ", readRetrys);
+                read = await readingInputs();
+                readRetrys++;
+                if (readRetrys > maxRetrys) {
+                    console.log("Error leyendo las Inputs:");
+                    // apiResponse.ErrorResponse(res, "ERROR, FAIL READ Inputs");
+                    throw new Error("ERROR, FAIL READ Inputs");
+                }
+            }
+        }
+        return apiResponse.successResponseWithData(res, "INPUTS READ OK", read);
 
     } catch (error) {
         console.log("Error opening the COM port:", error);
-        apiResponse.ErrorResponse(res, "ERROR, FAIL TO OPEN PORT");
-    }
-
-    function readI() {
-        console.log("entro a leer inputs");
-        client.setTimeout(mbsTimeout);
-
-        client.readDiscreteInputs(0, 5)
-            .then((data) => {
-                console.log("data:", data);
-                return apiResponse.successResponseWithData(res, "INPUTS READ OK", data);
-            })
-            .catch((error) => {
-                console.log("Error leyendo los Coils:", error);
-                apiResponse.ErrorResponse(res, "ERROR, FAIL READ INPUTS");
-            });
+        apiResponse.ErrorResponse(res, "ERROR, FAIL TO READ COILS: " + error);
     }
 };
 
@@ -176,11 +182,11 @@ exports.writeCoils = async (req, res) => {
     try {
         if (!client.isOpen) {
             client.connectRTUBuffered("COM8", { baudRate: 115200, parity: "none", dataBits: 8, stopBits: 1 }, writeC);
-            mbsStatus = "Connected, wait for reading...";
-            console.log("Status connectRTUBuffered: ", mbsStatus);
+
+            console.log("Status connectRTUBuffered: ", "Connected, wait for reading...");
         } else {
-            mbsStatus = "CLient already Opened, wait for reading...";
-            console.log("Status connectRTUBuffered: ", mbsStatus);
+
+            console.log("Status connectRTUBuffered: ", "CLient already Opened, wait for reading...");
             writeC();
         }
 
@@ -208,3 +214,84 @@ exports.writeCoils = async (req, res) => {
     }
 
 };
+
+const readingCoils = async () => {
+    console.log("entro a leer coils");
+    client.setTimeout(mbsTimeout);
+    try {
+        let data = await client.readCoils(0, 4);
+        const CoilsData = data.data;
+        console.log("CoilsData:", CoilsData);
+        return CoilsData;
+    } catch (error) {
+        console.log("Error leyendo los Coils:", error);
+        return false;
+    }
+
+};
+
+
+const readingInputs = async () => {
+    console.log("entro a leer Inputs");
+    client.setTimeout(mbsTimeout);
+    try {
+        let data = await client.readDiscreteInputs(0, 5);
+        const CoilsData = data.data;
+        console.log("InputsData:", CoilsData);
+        return CoilsData;
+    } catch (error) {
+        console.log("Error leyendo las Inputs:", error);
+        return false;
+    }
+
+};
+
+
+const openCom = async (port) => {
+    if (!client.isOpen) {
+        console.log("Opening " + port + " Port");
+        try {
+            await client.connectRTUBuffered(port, { baudRate: 115200, parity: "none", dataBits: 8, stopBits: 1 });
+            console.log("COM8 port Open, waiting for Read");
+            return true;
+        } catch (error) {
+            console.log("ERROR OPENING THE COM PORT: ", error);
+            return false;
+        }
+    } else {
+        console.log("COM8 port already Opened, waiting for Read");
+        return true;
+    }
+};
+
+
+// if (!client.isOpen) {
+//     console.log("COM port NOT OPEN, WILL OPEN ");
+//     client.connectRTUBuffered("COM8", { baudRate: 115200, parity: "none", dataBits: 8, stopBits: 1 }, readC);
+//     // mbsStatus = "Connected, wait for reading...";
+//     // console.log("Status connectRTUBuffered: ", mbsStatus);
+//     // readC();
+// } else {
+//     mbsStatus = "CLient already Opened, wait for reading...";
+//     console.log("Status connectRTUBuffered: ", mbsStatus);
+//     readC();
+// }
+
+
+
+// function readC() {
+//     console.log("entro a leer coils");
+//     client.setTimeout(mbsTimeout);
+//     // retrys++;
+//     client.readCoils(0, 4)
+//         .then((data) => {
+//             const CoilsData = data.data;
+//             console.log("CoilsData:", CoilsData);
+//             return apiResponse.successResponseWithData(res, "COILS READ OK", CoilsData);
+//         })
+//         .catch((error) => {
+//             console.log("Error leyendo los Coils:", error);
+//             apiResponse.ErrorResponse(res, "ERROR, FAIL READ COILS");
+//         });
+// }
+
